@@ -21,14 +21,14 @@ public class LinkParser {
     private PageRepository pageRepository;
 
 
-    public LinkParser(String url, String startUrl) {
+    public LinkParser(String url, String startUrl, String siteName) {
         this.url = url;
         this.startUrl = startUrl;
-        parse("name");
+        parse(siteName);
     }
 
-    private void parse(String name) {
-        Site site = new Site("",startUrl,name);
+    private void parse(String siteName) {
+        Site site = new Site("",startUrl,siteName);
         LinkCrawler linkCrawler = new LinkCrawler(url, startUrl, verifiedLinks,site);
     }
 

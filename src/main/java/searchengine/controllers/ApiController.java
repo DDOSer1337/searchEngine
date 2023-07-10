@@ -1,15 +1,8 @@
 package searchengine.controllers;
 
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.boot.Metadata;
-import org.hibernate.boot.MetadataSources;
-import org.hibernate.boot.registry.StandardServiceRegistry;
-import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.query.Query;
+import lombok.SneakyThrows;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +17,6 @@ import searchengine.config.Site;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.StatisticsService;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 
 @RestController
@@ -37,7 +29,7 @@ public class ApiController {
     private SiteRepository siteRepository;
 
     @Autowired
-    PageRepository pageRepository;
+    private PageRepository pageRepository;
 
     public ApiController(StatisticsService statisticsService) {
         this.statisticsService = statisticsService;
@@ -51,6 +43,7 @@ public class ApiController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
     }
 
+    @SneakyThrows
     @GetMapping("/startIndexing/")
     public ResponseEntity<StatisticsResponse> startIndexing() {
         Site site = new Site();
@@ -61,19 +54,15 @@ public class ApiController {
         site.setStatusTime(LocalDateTime.now());
 
         siteRepository.save(site);
-        Document document = null;
-        try {
-            document = Jsoup.connect("https://www.lenta.ru")
-                    .userAgent("Mozilla/5.0 (Windows; U; WindowsNT " +
-                            "5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                    .referrer("http://www.google.com").get();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        if (document!=null) {
-            Page page = new Page(site.getUrl(), document, site.getUrl(), site, 123);
-            pageRepository.save(page);
-        }
+
+        Connection document = Jsoup.connect("https://www.lenta.ru")
+                .userAgent("Mozilla/5.0 (Windows; U; WindowsNT " +
+                        "5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
+                .referrer("http://www.google.com");
+
+        Page page = new Page(site.getUrl(), document.get(), site.getUrl(), site, document.execute().statusCode());
+        pageRepository.save(page);
+
         return ResponseEntity.status(HttpStatus.OK).body(new StatisticsResponse());
     }
 }
