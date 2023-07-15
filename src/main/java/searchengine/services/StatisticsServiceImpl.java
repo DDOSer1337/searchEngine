@@ -56,8 +56,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         for (Site site : sitesList) {
             LinkParser linkParser = new LinkParser(site.getUrl());
             DetailedStatisticsItem item = getDetailedStatisticsItem(statuses, errors, site);
-            total.setPages(getPageCount(site));
-            total.setLemmas(getLemmaCount(site));
+            total.setPages(total.getPages()+getPageCount(site));
+            total.setLemmas(total.getLemmas()+getLemmaCount(site));
             detailed.add(item);
         }
         StatisticsResponse response = new StatisticsResponse();
