@@ -27,7 +27,7 @@ public class LinkParser {
     }
 
     private void parse() {
-        if (checkUrl(domain)) {
+        if (checkUrl(startUrl)) {
             String sql = "SELECT * FROM skillbox.sites  WHERE `name` = '" + domain + "'";
             try {
                 DBConnector dbConnector = new DBConnector();
@@ -39,7 +39,6 @@ public class LinkParser {
                 }
                 Site site = new Site(startUrl,domain);
                 siteRepository.save(site);
-
                 LinkCrawler linkCrawler = new LinkCrawler(domain, startUrl, verifiedLinks, site);
             } catch (SQLException e) {
                 siteException = e.getMessage();
