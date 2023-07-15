@@ -1,7 +1,8 @@
-package searchengine.Busines.LinkHandling;
+package searchengine.Busines;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
+import searchengine.Busines.LinkHandling.DBConnector;
 import searchengine.model.Enum.siteStatus;
 import searchengine.model.Site;
 
