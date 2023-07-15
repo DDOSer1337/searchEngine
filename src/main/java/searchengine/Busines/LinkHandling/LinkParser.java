@@ -21,7 +21,7 @@ public class LinkParser {
 
     public LinkParser(String startUrl) {
         String[] getDomain = startUrl.split("/");
-        this.domain = getDomain[2]+"/";
+        this.domain = getDomain[2] + "/";
         this.startUrl = startUrl;
         parse();
     }
@@ -37,13 +37,30 @@ public class LinkParser {
                 if (q.next()) {
                     statement.executeQuery("DELETE FROM skillbox.sites WHERE `name` = '" + domain + "'");
                 }
-                Site site = new Site(startUrl,domain);
-                siteRepository.save(site);
+                Site site = new Site(startUrl, domain);
+                siteUploader(statement, site);
                 LinkCrawler linkCrawler = new LinkCrawler(domain, startUrl, verifiedLinks, site);
             } catch (SQLException e) {
                 siteException = e.getMessage();
             }
         }
+    }
+
+    private void siteUploader(Statement statement, Site site) throws SQLException {
+        statement.executeQuery("INSERT INTO `skillbox`.`sites`\n" +
+                "(`id`,\n" +
+                "`last_error`,\n" +
+                "`name`,\n" +
+                "`site_status`,\n" +
+                "`status_time`,\n" +
+                "`url`)\n" +
+                "VALUES\n" +
+                "(" + site.getId() + ",\n" +
+                site.getLastError() + ">,\n" +
+                site.getName() + ",\n" +
+                site.getSiteStatus() + ",\n" +
+                site.getSiteStatus() + ",\n" +
+                site.getUrl() + ");");
     }
 
     public static boolean checkUrl(String s) {
