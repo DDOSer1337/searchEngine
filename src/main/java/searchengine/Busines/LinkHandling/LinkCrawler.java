@@ -4,11 +4,9 @@ import lombok.SneakyThrows;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
-import org.springframework.beans.factory.annotation.Autowired;
 import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
-import searchengine.model.Repository.PageRepository;
 import searchengine.model.Site;
 
 import java.sql.SQLException;
@@ -21,9 +19,6 @@ public class LinkCrawler extends RecursiveAction {
     private final String domain, currentLink;
     private final Set<String> verifiedLinks;
     private final Site site;
-
-    @Autowired
-    private PageRepository pageRepository;
     private final DBConnector dbConnector = new DBConnector();
 
 
@@ -61,7 +56,7 @@ public class LinkCrawler extends RecursiveAction {
     private void recursiveActionFork(String newLink, Connection connection) {
         if (isCorrectUrl(newLink)) {
             Page page = new Page(newLink, connection.get(), domain, site, connection.execute().statusCode());
-            pageRepository.save(page);
+            pageUploader(page);
             LemmaSearch lemmaSearch = new LemmaSearch(site, connection.get().text());
             List<Lemma> lemmaList = lemmaSearch.invoke();
             IndexCreator(page, lemmaList);
@@ -70,6 +65,21 @@ public class LinkCrawler extends RecursiveAction {
         }
     }
 
+    private void pageUploader(Page page) throws SQLException {
+        dbConnector.getConnection().createStatement().executeQuery("INSERT INTO `skillbox`.`pages`\n" +
+                "(`id`,\n" +
+                "`code`,\n" +
+                "`content`,\n" +
+                "`path`,\n" +
+                "`sites_id`)\n" +
+                "VALUES\n" +
+                "("+ page.getId()+",\n" +
+                page.getCode()+",\n" +
+                page.getContent()+",\n" +
+                page.getPath()+",\n" +
+                page.getSiteId()+");");
+        System.out.println("pageUploader");
+    }
     private void IndexCreator(Page page, List<Lemma> lemmaList) throws SQLException {
         int counterForUploadingToDatabase = 0;
         StringBuilder builder = new StringBuilder();
