@@ -1,21 +1,21 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
 
-import searchengine.config.Lemma;
-import searchengine.config.Page;
-import searchengine.config.Repository.LemmaRepository;
-import searchengine.config.Repository.PageRepository;
-import searchengine.config.Repository.SiteRepository;
-import searchengine.config.Site;
-import searchengine.config.SitesList;
+import searchengine.Busines.LinkHandling.DBConnector;
+import searchengine.Busines.LinkHandling.LinkParser;
+import searchengine.model.Site;
+import searchengine.model.SitesList;
 import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -26,14 +26,18 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     private final Random random = new Random();
     private final SitesList sites;
+    DBConnector dbConnector = new DBConnector();
+    Statement statement;
 
-    @Autowired
-    private final SiteRepository siteRepository;
-    @Autowired
-    private final PageRepository pageRepository;
-    @Autowired
-    private final LemmaRepository lemmaRepository;
+    {
+        try {
+            statement = dbConnector.getConnection().createStatement();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 
+    @SneakyThrows
     @Override
     public StatisticsResponse getStatistics() {
         String[] statuses = {"INDEXED", "FAILED", "INDEXING"};
@@ -49,16 +53,13 @@ public class StatisticsServiceImpl implements StatisticsService {
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
         List<Site> sitesList = sites.getSites();
 
-        for (int i = 0; i < sitesList.size(); i++) {
-            Site site = sitesList.get(i);
-            int pages = getPages(site).size();
-            int lemmas = getLemma(site).size();
-            DetailedStatisticsItem item = getDetailedStatisticsItem(statuses, errors, i, site, pages, lemmas);
-            total.setPages(total.getPages() + item.getPages());
-            total.setLemmas(total.getLemmas() + item.getLemmas());
+        for (Site site : sitesList) {
+            LinkParser linkParser = new LinkParser(site.getUrl());
+            DetailedStatisticsItem item = getDetailedStatisticsItem(statuses, errors, site);
+            total.setPages(getPageCount(site));
+            total.setLemmas(getLemmaCount(site));
             detailed.add(item);
         }
-
         StatisticsResponse response = new StatisticsResponse();
         StatisticsData data = new StatisticsData();
         data.setTotal(total);
@@ -69,38 +70,47 @@ public class StatisticsServiceImpl implements StatisticsService {
         return response;
     }
 
-    private List<Lemma> getLemma(Site site) {
-        List<Lemma> lemmaList = new ArrayList<>();
-        Iterable<Lemma> lemmaIterable = lemmaRepository.findAll();
-        for (Lemma lemma : lemmaIterable) {
-            if (lemma.getSiteId().equals(site)) {
-                lemmaList.add(lemma);
-            }
-        }
-        return lemmaList;
-    }
-
-    private List<Page> getPages(Site site) {
-        List<Page> pageList = new ArrayList<>();
-        Iterable<Page> pageIterable = pageRepository.findAll();
-        for (Page page : pageIterable) {
-            if (page.getSiteId().equals(site)){
-                pageList.add(page);
-            }
-        }
-        return pageList;
-    }
-
-    private DetailedStatisticsItem getDetailedStatisticsItem(String[] statuses, String[] errors, int i, Site site, int pages, int lemmas) {
+    @SneakyThrows
+    private DetailedStatisticsItem getDetailedStatisticsItem(String[] statuses, String[] errors, Site site) {
         DetailedStatisticsItem item = new DetailedStatisticsItem();
         item.setName(site.getName());
         item.setUrl(site.getUrl());
-        item.setPages(pages);
-        item.setLemmas(lemmas);
-        item.setStatus(statuses[i % 3]);
-        item.setError(errors[i % 3]);
+
+        try {
+            item.setPages(getPageCount(site));
+            item.setLemmas(getLemmaCount(site));
+            item.setStatus(statuses[2]);
+            item.setError(errors[2]);
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            item.setLemmas(0);
+            item.setPages(0);
+            item.setError(errors[2]);
+            item.setStatus(statuses[1]);
+        }
         item.setStatusTime(System.currentTimeMillis() - (random.nextInt(10_000)));
         return item;
+    }
+
+    private int getLemmaCount(Site site) throws SQLException {
+        int i = 0;
+        String queryForGetLemmaCount = "SELECT Count(*) FROM skillbox.lemmas AS l JOIN skillbox.sites AS s ON l.sites_id = s.id WHERE s.name = '" + site.getName() + "'";
+        ResultSet lemmaCount = statement.executeQuery(queryForGetLemmaCount);
+        if (lemmaCount.next()) {
+            i = lemmaCount.getInt("Count(*)");
+        }
+        return i;
+    }
+
+    private int getPageCount(Site site) throws SQLException {
+        int i = 0;
+        String queryForGetPageCount = "SELECT Count(*) FROM skillbox.pages AS p JOIN skillbox.sites AS s ON p.sites_id = s.id WHERE s.name = '" + site.getName() + "'";
+        ResultSet pageCount = statement.executeQuery(queryForGetPageCount);
+        if (pageCount.next()) {
+            i = pageCount.getInt("Count(*)");
+        }
+        return i;
     }
 }
 
