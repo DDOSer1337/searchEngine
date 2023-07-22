@@ -1,73 +1,61 @@
 package searchengine.Busines.LinkHandling;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import searchengine.model.Repository.IndexRepository;
+import searchengine.model.Repository.LemmaRepository;
+import searchengine.model.Repository.PageRepository;
 import searchengine.model.Repository.SiteRepository;
 import searchengine.model.Site;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+@RequiredArgsConstructor
 public class LinkParser {
-    private final String domain, startUrl;
-    private final Set<String> verifiedLinks = Collections.synchronizedSet(new HashSet<>());
-    private String siteException;
+    private String domain;
+    private final String startUrl;
+    private Set<String> verifiedLinks = Collections.synchronizedSet(new HashSet<>());
+    private final SiteRepository siteRepository;
+    private final PageRepository pageRepository;
+    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
 
-    @Autowired
-    private SiteRepository siteRepository;
 
-    public LinkParser(String startUrl) {
+    public void parse() {
+
         String[] getDomain = startUrl.split("/");
-        this.domain = getDomain[2] + "/";
-        this.startUrl = startUrl;
-        parse();
-    }
-
-    private void parse() {
-        if (checkUrl(startUrl)) {
-            String sql = "SELECT * FROM skillbox.sites  WHERE `name` = '" + domain + "'";
-            try {
-                DBConnector dbConnector = new DBConnector();
-                Statement statement = dbConnector.getConnection().createStatement();
-                ResultSet q = statement.executeQuery(sql);
-
-                if (q.next()) {
-                    statement.executeQuery("DELETE FROM skillbox.sites WHERE `name` = '" + domain + "'");
-                }
-                Site site = new Site(startUrl, domain);
-                siteUploader(statement, site);
-                LinkCrawler linkCrawler = new LinkCrawler(domain, startUrl, verifiedLinks, site);
-            } catch (SQLException e) {
-                siteException = e.getMessage();
+        domain = getDomain[2];
+        if (checkUrl() && !checkAvailabilityInDB()) {
+            Site site = new Site(startUrl, domain);
+            if (!checkAvailabilityInDB()) {
+                siteRepository.save(site);
             }
+            else {
+                //написать удаление и создание
+            }
+            LinkCrawler linkCrawler = new LinkCrawler(domain, startUrl, verifiedLinks, site, siteRepository, pageRepository, lemmaRepository, indexRepository);
+            linkCrawler.compute();
         }
     }
 
-    private void siteUploader(Statement statement, Site site) throws SQLException {
-        statement.executeQuery("INSERT INTO `skillbox`.`sites`\n" +
-                "(`id`,\n" +
-                "`last_error`,\n" +
-                "`name`,\n" +
-                "`site_status`,\n" +
-                "`status_time`,\n" +
-                "`url`)\n" +
-                "VALUES\n" +
-                "(" + site.getId() + ",\n" +
-                site.getLastError() + ">,\n" +
-                site.getName() + ",\n" +
-                site.getSiteStatus() + ",\n" +
-                site.getSiteStatus() + ",\n" +
-                site.getUrl() + ");");
+    public boolean checkUrl() {
+        return startUrl != null && (startUrl.matches("^(https?)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"));
     }
 
-    public static boolean checkUrl(String s) {
-        return s != null && (s.matches("^(https?)://[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"));
-    }
-
-    public String getSiteException() {
-        return siteException;
+    @SneakyThrows
+    public boolean checkAvailabilityInDB() {
+        boolean b = false;
+        DBConnector dbConnector = new DBConnector();
+        Statement statement = dbConnector.getConnection().createStatement();
+        String sql = "SELECT * FROM skillbox.sites WHERE name = '" + domain + "'";
+        ResultSet resultSet = statement.executeQuery(sql);
+        while (resultSet.next()) {
+            b = true;
+        }
+        return b;
     }
 }
