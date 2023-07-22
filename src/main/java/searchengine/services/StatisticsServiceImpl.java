@@ -6,6 +6,10 @@ import org.springframework.stereotype.Service;
 
 import searchengine.Busines.LinkHandling.DBConnector;
 import searchengine.Busines.LinkHandling.LinkParser;
+import searchengine.model.Repository.IndexRepository;
+import searchengine.model.Repository.LemmaRepository;
+import searchengine.model.Repository.PageRepository;
+import searchengine.model.Repository.SiteRepository;
 import searchengine.model.Site;
 import searchengine.model.SitesList;
 import searchengine.dto.statistics.DetailedStatisticsItem;
@@ -18,17 +22,24 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
 public class StatisticsServiceImpl implements StatisticsService {
-
-    private final Random random = new Random();
     private final SitesList sites;
+    private final SiteRepository siteRepository;
+    private final PageRepository pageRepository;
+    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
+
+    String[] statuses = {"INDEXED", "FAILED", "INDEXING"};
+    String[] errors = {
+            "Ошибка индексации: главная страница сайта не доступна",
+            "Ошибка индексации: сайт не доступен",
+            ""
+    };
     DBConnector dbConnector = new DBConnector();
     Statement statement;
-
     {
         try {
             statement = dbConnector.getConnection().createStatement();
@@ -40,24 +51,14 @@ public class StatisticsServiceImpl implements StatisticsService {
     @SneakyThrows
     @Override
     public StatisticsResponse getStatistics() {
-        String[] statuses = {"INDEXED", "FAILED", "INDEXING"};
-        String[] errors = {
-                "Ошибка индексации: главная страница сайта не доступна",
-                "Ошибка индексации: сайт не доступен",
-                ""
-        };
         TotalStatistics total = new TotalStatistics();
         total.setSites(sites.getSites().size());
         total.setIndexing(true);
-
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
-        List<Site> sitesList = sites.getSites();
-
-        for (Site site : sitesList) {
-            LinkParser linkParser = new LinkParser(site.getUrl());
+        for (Site site : sites.getSites()) {
             DetailedStatisticsItem item = getDetailedStatisticsItem(statuses, errors, site);
-            total.setPages(total.getPages()+getPageCount(site));
-            total.setLemmas(total.getLemmas()+getLemmaCount(site));
+            total.setPages(total.getPages() + getPageCount(site));
+            total.setLemmas(total.getLemmas() + getLemmaCount(site));
             detailed.add(item);
         }
         StatisticsResponse response = new StatisticsResponse();
@@ -65,7 +66,6 @@ public class StatisticsServiceImpl implements StatisticsService {
         data.setTotal(total);
         data.setDetailed(detailed);
         response.setStatistics(data);
-        // не трогать
         response.setResult(true);
         return response;
     }
@@ -89,7 +89,7 @@ public class StatisticsServiceImpl implements StatisticsService {
             item.setError(errors[2]);
             item.setStatus(statuses[1]);
         }
-        item.setStatusTime(System.currentTimeMillis() - (random.nextInt(10_000)));
+        item.setStatusTime(System.currentTimeMillis());
         return item;
     }
 
@@ -111,6 +111,13 @@ public class StatisticsServiceImpl implements StatisticsService {
             i = pageCount.getInt("Count(*)");
         }
         return i;
+    }
+
+    public void startParse() throws SQLException {
+        for (Site site : sites.getSites()) {
+            LinkParser linkParser = new LinkParser(site.getUrl(), siteRepository, pageRepository, lemmaRepository, indexRepository);
+            linkParser.parse();
+        }
     }
 }
 
