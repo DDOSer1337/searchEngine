@@ -31,7 +31,7 @@ public class ApiController {
         try {
             statisticsService.startParse();
         } catch (SQLException e) {
-            ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
         return ResponseEntity.status(HttpStatus.OK).body(statisticsService.getStatistics());
     }
