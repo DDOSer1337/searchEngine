@@ -57,7 +57,7 @@ public class LinkCrawler extends RecursiveAction {
             Page page = new Page(newLink, connection.get(), domain, site, connection.execute().statusCode());
             pageRepository.save(page);
             LemmaSearch lemmaSearch = new LemmaSearch(site, connection.get().text());
-            List<Lemma> lemmaList = lemmaSearch.invoke();
+            List<Lemma> lemmaList = lemmaSearch.getLemmas();
             IndexCreator(page, lemmaList);
             LinkCrawler recursiveTask = new LinkCrawler(newLink, domain, verifiedLinks, site, siteRepository, pageRepository, lemmaRepository, indexRepository);
             recursiveTask.fork();
