@@ -14,7 +14,7 @@ import javax.persistence.Index;
 @Table(name = "pages",indexes = @Index(columnList = "path"))
 public class Page {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @ManyToOne(cascade = CascadeType.ALL)
@@ -37,7 +37,6 @@ public class Page {
     public Page(String newLink, Document document,String domain,Site siteId, Integer code) {
         int start = newLink.indexOf(domain) + domain.length();
         int end = newLink.length();
-
         this.path = newLink.substring(start, end);
         this.content = document.toString();
         this.siteId = siteId;

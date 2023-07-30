@@ -14,7 +14,7 @@ import java.util.Objects;
 public class Site {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     @Enumerated(EnumType.STRING)
@@ -37,7 +37,6 @@ public class Site {
     }
 
     public Site(String url, String name) {
-
         this.siteStatus = searchengine.model.Enum.siteStatus.INDEXING;
         this.statusTime = LocalDateTime.now();
         this.url = url;

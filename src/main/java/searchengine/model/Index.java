@@ -11,7 +11,7 @@ import javax.persistence.*;
 @Table(name = "indices")
 public class Index{
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     @ManyToOne
@@ -31,6 +31,7 @@ public class Index{
     public Index(Page pageId, Lemma lemmaId) {
         this.pageId = pageId;
         this.lemmaId = lemmaId;
+        rank = 1;
     }
 
 
