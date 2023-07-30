@@ -2,13 +2,16 @@ package searchengine.Busines.LinkHandling;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import searchengine.dto.statistics.ExceptionData;
+import searchengine.dto.statistics.Result;
 import searchengine.model.Repository.IndexRepository;
 import searchengine.model.Repository.LemmaRepository;
 import searchengine.model.Repository.PageRepository;
 import searchengine.model.Repository.SiteRepository;
 import searchengine.model.Site;
-
-import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collections;
 import java.util.HashSet;
@@ -23,20 +26,24 @@ public class LinkParser {
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
     private final IndexRepository indexRepository;
+    public static boolean needToStopTheParser;
 
 
     public void parse() {
-
+        needToStopTheParser = false;
         String[] getDomain = startUrl.split("/");
         domain = getDomain[2];
-        if (checkUrl() && !checkAvailabilityInDB()) {
+        if (checkUrl()) {
             Site site = new Site(startUrl, domain);
-            if (!checkAvailabilityInDB()) {
-                siteRepository.save(site);
+            if (checkAvailabilityInDB()) {
+                String sql = "DELETE FROM skillbox.sites WHERE name = '" + domain + "'";
+                try {
+                    getStatement().executeUpdate(sql);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
-            else {
-                //написать удаление и создание
-            }
+            siteRepository.save(site);
             LinkCrawler linkCrawler = new LinkCrawler(domain, startUrl, verifiedLinks, site, siteRepository, pageRepository, lemmaRepository, indexRepository);
             linkCrawler.compute();
         }
@@ -48,14 +55,29 @@ public class LinkParser {
 
     @SneakyThrows
     public boolean checkAvailabilityInDB() {
-        boolean b = false;
-        DBConnector dbConnector = new DBConnector();
-        Statement statement = dbConnector.getConnection().createStatement();
         String sql = "SELECT * FROM skillbox.sites WHERE name = '" + domain + "'";
-        ResultSet resultSet = statement.executeQuery(sql);
-        while (resultSet.next()) {
-            b = true;
+        return getStatement().executeQuery(sql).next();
+    }
+
+    private Statement getStatement() throws SQLException {
+        return new DBConnector().getConnection().createStatement();
+    }
+
+    public static ResponseEntity<?> stopParse(){
+        Result result = new Result();
+        if (isNeedToStopTheParser()){
+            ExceptionData exceptionData = new ExceptionData();
+            result.setResult(false);
+            exceptionData.setError("Индексация не запущена");
+            exceptionData.setResult(result);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exceptionData);
+        }else {
+            needToStopTheParser = true;
+            result.setResult(true);
+            return ResponseEntity.status(HttpStatus.OK).body(result);
         }
-        return b;
+    }
+    public static boolean isNeedToStopTheParser() {
+        return needToStopTheParser;
     }
 }
