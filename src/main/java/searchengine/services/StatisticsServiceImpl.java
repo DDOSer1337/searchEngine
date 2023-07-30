@@ -2,6 +2,7 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import searchengine.Busines.LinkHandling.DBConnector;
@@ -79,8 +80,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         try {
             item.setPages(getPageCount(site));
             item.setLemmas(getLemmaCount(site));
-            item.setStatus(statuses[2]);
-            item.setError(errors[2]);
+            item.setStatus(getStatus(site));
+            item.setError(getError(site));
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -109,6 +110,24 @@ public class StatisticsServiceImpl implements StatisticsService {
         ResultSet pageCount = statement.executeQuery(queryForGetPageCount);
         if (pageCount.next()) {
             i = pageCount.getInt("Count(*)");
+        }
+        return i;
+    }
+    private String getStatus(Site site) throws SQLException {
+        String i = null;
+        String queryForGetPageCount = "SELECT * FROM skillbox.sites AS s WHERE s.site_status = '" + site.getName() + "'";
+        ResultSet pageCount = statement.executeQuery(queryForGetPageCount);
+        if (pageCount.next()) {
+            i = pageCount.getString("site_status");
+        }
+        return i;
+    }
+    private String getError(Site site) throws SQLException {
+        String i = null;
+        String queryForGetPageCount = "SELECT * FROM skillbox.sites AS s WHERE s.last_error = '" + site.getName() + "'";
+        ResultSet pageCount = statement.executeQuery(queryForGetPageCount);
+        if (pageCount.next()) {
+            i = pageCount.getString("last_error");
         }
         return i;
     }
