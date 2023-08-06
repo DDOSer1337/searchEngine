@@ -7,8 +7,9 @@ import org.jsoup.nodes.Document;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import searchengine.Busines.LinkHandling.DBConnector;
-import searchengine.dto.statistics.ExceptionData;
-import searchengine.dto.statistics.Result;
+import searchengine.dto.resultResponse.ExceptionData;
+import searchengine.dto.resultResponse.Result;
+import searchengine.model.Enum.siteStatus;
 import searchengine.model.Page;
 import searchengine.model.Repository.LemmaRepository;
 import searchengine.model.Repository.PageRepository;
@@ -18,6 +19,7 @@ import searchengine.model.Site;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class PageCreator {
     private Page page = null;
@@ -69,14 +71,21 @@ public class PageCreator {
     @SneakyThrows
     private void deletePage() {
         String sql = "DELETE FROM skillbox.pages WHERE path = '" + page.getPath() + "'" + "AND sites_id ='" + page.getSiteId() + "'";
-        new DBConnector().getStatement().executeUpdate(sql);
+        DBConnector dbConnector = new DBConnector();
+        Statement statement = dbConnector.getConnection().createStatement();
+        statement.executeUpdate(sql);
+        statement.close();
     }
 
 
     private static boolean isPageExist(Page page) {
         String sql = "SELECT * FROM skillbox.pages WHERE path = '" + page.getPath() + "'" + "AND sites_id ='" + page.getSiteId() + "'";
         try {
-            return new DBConnector().getStatement().executeQuery(sql).next();
+            DBConnector dbConnector = new DBConnector();
+            Statement statement = dbConnector.getConnection().createStatement();
+            boolean b = statement.executeQuery(sql).next();
+            statement.close();
+            return b;
         } catch (SQLException e) {
             return false;
         }
@@ -86,11 +95,14 @@ public class PageCreator {
     private Site getOrCreateSite(SiteRepository siteRepository) {
         Site site;
         String sql = "SELECT * FROM skillbox.sites WHERE name = '" + domain + "'";
-        ResultSet resultSet = new DBConnector().getStatement().executeQuery(sql);
+        DBConnector dbConnector = new DBConnector();
+        Statement statement = dbConnector.getConnection().createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
         if (resultSet.next()) {
             site = new Site();
             site.setId(resultSet.getInt("id"));
             site.setName(resultSet.getString("name"));
+            site.setSiteStatus(siteStatus.valueOf(resultSet.getString("site_status")));
         } else {
             site = new Site(link, domain);
             siteRepository.save(site);

@@ -10,7 +10,6 @@ import searchengine.Busines.LinkHandling.Creator.IndexCreator;
 import searchengine.Busines.LinkHandling.Creator.LemmaCreator;
 import searchengine.Busines.LinkHandling.Creator.PageCreator;
 import searchengine.model.Enum.siteStatus;
-import searchengine.model.Index;
 import searchengine.model.Lemma;
 import searchengine.model.Page;
 import searchengine.model.Repository.IndexRepository;
@@ -20,8 +19,8 @@ import searchengine.model.Repository.SiteRepository;
 import searchengine.model.Site;
 
 import java.io.IOException;
-import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
@@ -95,7 +94,10 @@ public class LinkCrawler extends RecursiveAction {
                 "`last_error` = 'Ошибка индексации: главная страница сайта не доступна'\n" +
                 "WHERE `url` = '" + site.getUrl()+"'";
         try {
-            new DBConnector().getStatement().executeUpdate(sql);
+            DBConnector dbConnector = new DBConnector();
+            Statement statement = dbConnector.getConnection().createStatement();
+            statement.executeUpdate(sql);
+            statement.close();
         } catch (SQLException e) {
             e.printStackTrace();
         }
