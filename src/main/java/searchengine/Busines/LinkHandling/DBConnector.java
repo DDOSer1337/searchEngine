@@ -1,11 +1,8 @@
 package searchengine.Busines.LinkHandling;
 
-import lombok.SneakyThrows;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class DBConnector {
     private Connection connection;
@@ -26,9 +23,5 @@ public class DBConnector {
             }
         }
         return connection;
-    }
-    @SneakyThrows
-    public Statement getStatement(){
-        return new DBConnector().getConnection().createStatement();
     }
 }
