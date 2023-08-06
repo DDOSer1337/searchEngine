@@ -2,7 +2,6 @@ package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import searchengine.Busines.LinkHandling.DBConnector;
@@ -84,7 +83,7 @@ public class StatisticsServiceImpl implements StatisticsService {
             item.setError(getError(site));
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
             item.setLemmas(0);
             item.setPages(0);
             item.setError(errors[2]);
